@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Events\MyEvent;
+use App\Events\MessageCreated;
 use App\Models\MessageRoom as Room;
 use App\Models\ModelMessage;
 use App\Models\ModelMessageRoom;
@@ -142,10 +144,13 @@ class MessengerController extends Controller
         }
 
         ModelMessage::create($aMessageCreate);
+        $aUpdatedMessages = $this->getChatMessageRoom(Auth::user()->id, $iFriendId);
+
+        event(new MyEvent($aUpdatedMessages->message->last()));
 
         return response()->json([
             'result' => 'success',
-            'message' => $this->getChatMessageRoom(Auth::user()->id, $iFriendId)
+            'message' => $aUpdatedMessages
         ]);
     }
 

@@ -29,6 +29,11 @@
             getMessageImgUrl: function(sUrl) {
                 return window.location.href + '' + sUrl;
             },
+            /**
+             * Determine if the message was a reply or sent by current logged user
+             * @param message
+             * @returns {string}
+             */
             getMessageClass: function (message) {
                 if (message.sender_id === this.oLoggedUser.id) {
                     return 'replies'

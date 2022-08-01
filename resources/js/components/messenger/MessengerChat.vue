@@ -11,7 +11,7 @@
 
         <messenger-chat-main :oMessages="oMessages" :oLoggedUser="oLoggedUser"></messenger-chat-main>
 
-        <messenger-chat-form v-if="oSelectedUser.length !== 0"
+        <messenger-chat-form v-if="checkIfNotSelectedUser !== true"
                              :oSelectedUser="oSelectedUser"
                              v-model="file_upload"
                              @sendChatMessage="sendChatMessage"
@@ -21,6 +21,7 @@
 </template>
 
 <script>
+    import { mapState, mapGetters, mapActions } from 'vuex';
     import MessengerChatHeader from "./MessengerChatHeader";
     import MessengerChatMain from "./MessengerChatMain";
     import MessengerChatForm from "./MessengerChatForm";
@@ -33,19 +34,24 @@
                 file_upload: ''
             }
         },
-        emits: ['updateChatMessage'],
+        emits: ['scrollToLatestMessage'],
         components: {
             MessengerChatHeader,
             MessengerChatMain,
             MessengerChatForm
         },
         props: {
-            oUserAccounts: Object,
-            oMessages: Array,
-            oLoggedUser: [Object, Array],
-            oSelectedUser: [Object, Array],
+            oUserAccounts: Object
         },
         computed: {
+            ...mapState({
+                oMessages       : state => state.chats.messages,
+                oLoggedUser: state => state.chats.loggedUser,
+                oSelectedUser   : state => state.chats.selectedUser,
+            }),
+            ...mapGetters([
+                'checkIfNotSelectedUser',
+            ]),
             getFacebookUrl() {
                 return '//www.facebook.com/' + this.oUserAccounts.facebook;
             },
@@ -57,15 +63,21 @@
             },
         },
         methods: {
+            ...mapActions([
+                'postSendChatMessage',
+            ]),
+            /**
+             * Create Request and send message
+             * @param oParameters
+             */
             sendChatMessage: function (oParameters) {
                 let oForm = new FormData();
                 oForm.append('file', this.file_upload);
                 oForm.append('message_to', oParameters.oSelectedUser.id);
                 oForm.append('message', oParameters.oChat);
-                axios.post('/api/messages/send', oForm)
-                    .then(oResponse => {
-                        this.$emit('updateChatMessage', oResponse)
-                    });
+                this.postSendChatMessage(oForm)
+                    .then(() => this.$emit('scrollToLatestMessage'))
+                .catch(error => console.log(error));
             }
         }
     }

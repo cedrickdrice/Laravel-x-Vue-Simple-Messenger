@@ -2,26 +2,20 @@
     <div id="frame">
         <messenger-sidebar
             :oUserAccounts="oUserAccounts"
-            :oLoggedUser="oLoggedUser"
-            :oSelectedUser="oSelectedUser"
-            :oChats="oChats"
             @getSelectChat="getSelectChat"
             @getChatWith="getChatWith"
         ></messenger-sidebar>
         <messenger-chat
             :oUserAccounts="oUserAccounts"
-            :oMessages="oMessages"
-            :oLoggedUser="oLoggedUser"
-            :oSelectedUser="oSelectedUser"
-            @updateChatMessage="updateChatMessage"
-            @getCurrentChatList="getCurrentChatList"
+            @scrollToLatestMessage="scrollToLatestMessage"
         />
     </div>
 </template>
 
 <script>
+    import { mapMutations, mapActions } from 'vuex';
     import MessengerChat from '../messenger/MessengerChat';
-    import MessengerSidebar from "../messenger/sidebar/MessengerSidebar";
+    import MessengerSidebar from "../messenger/MessengerSidebar";
     export default {
         name: "Messenger",
         data() {
@@ -30,11 +24,7 @@
                     facebook    : '',
                     twitter     : '',
                     instagram   : ''
-                },
-                oLoggedUser        : [], //Current User
-                oChats       : [], //Chat User
-                oMessages    : [], //Chat Messages
-                oSelectedUser    : [], //Selected chat person
+                }
             }
         },
         components: {
@@ -42,73 +32,67 @@
             MessengerChat
         },
         created() {
-            this.getCurrentUserDetail();
+            //Initialize broadcast listener
+            var channel = window.Echo.join('my-channel');
+            channel
+                .here(oOnlineUsers => {
+                    this.updateOnlineUserList(oOnlineUsers);
+                })
+                .joining(oRecentOnlineUser => {
+                    this.addOnlineUserList(oRecentOnlineUser);
+                })
+                .leaving(oRecentOfflineUser => {
+                    this.removeOfflineUserList(oRecentOfflineUser);
+                })
+                .listen('.my-event', (oChat) => {
+                    this.getBroadcastChatMessage(oChat);
+                    this.scrollToLatestMessage();
+                });
+        },
+        mounted() {
+            this.getLoggedUserDetail();
             this.getCurrentChatList();
         },
         methods: {
-            getCurrentUserDetail: function() {
-                axios.get('/api/get-user')
-                .then(oResponse => {
-                    this.oLoggedUser = oResponse.data.user;
-                })
-                .catch(function (error) {
-                    console.log(error);
-                });
-            },
+            ...mapMutations([
+                'updateOnlineUserList',
+                'addOnlineUserList',
+                'removeOfflineUserList'
+            ]),
+            ...mapActions([
+                'getUserChatList',
+                'getLoggedUserDetail',
+                'getChatWith',
+                'getSelectedChatDetail',
+                'getBroadcastChatMessage',
+            ]),
+            /**
+             * Get all user conversation previously
+             */
             getCurrentChatList: function() {
-                axios.get('/api/messages/contact/list').
-                then(oResponse => {
-                    this.oChats = oResponse.data.list;
-                    $('#loadingBar').hide();
-                })
-                .catch(function (error) {
-                    console.log(error);
-                });
+                this.getUserChatList()
+                    .then(function () {
+                        $('#loadingBar').hide();
+                    })
+                    .catch(error => console.log(error));
             },
             /**
-             * Get the name of who are you chatting with
-             * @param participant
-             * @returns {*}
+             * Select chat from chat list
              */
-            getChatWith: function(oChat) {
-                if (typeof(oChat.sender_id) === 'undefined' || oChat.sender_id === null) {
-                    return oChat;
-                }
-                if (oChat.sender_id !== this.oLoggedUser.id) {
-                    return oChat.sender
-                }
-                if (oChat.receiver_id !== this.oLoggedUser.id) {
-                    return oChat.receiver
-                }
-            },
             getSelectChat: function (oChat) {
-                var iSelectedUserId = this.getChatWith(oChat);
-                axios.post('/api/messages/contact/chat', {
-                    user_id : iSelectedUserId.id
-                }).then(oResponse => {
-                    this.oMessages = oResponse.data.messages.message;
-                    this.oSelectedUser = iSelectedUserId;
-                    this.scrollToLatestMessage();
-                })
-                .catch(function (error) {
-                    console.log(error);
-                })
+                this.getSelectedChatDetail(oChat)
+                    .then(response =>
+                        this.scrollToLatestMessage()
+                    );
             },
             /**
-             * Update Chat after send message
-             * @param oResponse
+             * Scroll to bottom
              */
-            updateChatMessage: function (oResponse) {
-                this.oMessages = oResponse.data.message.message; //Update chat window
-                this.getCurrentChatList(); //Update recent messages
-                this.scrollToLatestMessage();
-            },
             scrollToLatestMessage: function () {
-                var scroll=$('#frame > div.content > div.messages');
+                var scroll = $('#frame > div.content > div.messages');
                 setTimeout(function () {
                     scroll.scrollTop(scroll.prop("scrollHeight"));
                 }, 50);
-                // scroll.animate({scrollTop: scroll.prop("scrollHeight")});
             }
         }
     }

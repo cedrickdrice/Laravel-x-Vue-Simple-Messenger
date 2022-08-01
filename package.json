@@ -32,8 +32,11 @@
         "animate.css": "^4.1.1",
         "bootstrap-vue": "^2.22.0",
         "jquery": "^3.6.0",
+        "laravel-echo": "^1.13.0",
         "popper.js": "^1.16.1",
-        "vue": "^3.2.36",
-        "vue-router": "^4.1.2"
+        "pusher-js": "^7.3.0",
+        "vue": "^3.2.37",
+        "vue-router": "^4.1.2",
+        "vuex": "^4.0.2"
     }
 }

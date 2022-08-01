@@ -1,5 +1,5 @@
 <template>
-    <div v-if="oMessages.length > 0" class="contact-profile">
+    <div v-if="typeof(oSelectedUser.id) !== 'undefined' && oSelectedUser.id !== null" class="contact-profile">
         <img :src="oSelectedUser.image" alt="" />
         <p>{{ oSelectedUser.name }}</p>
         <div class="social-media">
